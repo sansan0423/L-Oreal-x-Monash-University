@@ -39,7 +39,7 @@ def map_category(raw_text: str) -> str:
         return "Brand"
     return "Other"
 
-# --- Optional: zero-shot classifier for relevance ---
+# --- zero-shot classifier for relevance ---
 def load_zero_shot_model():
     """Load zero-shot classification model."""
     return pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
