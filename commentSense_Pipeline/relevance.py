@@ -1,6 +1,6 @@
 from transformers import pipeline
 
-# --- Keyword lists (expand these as needed) ---
+# --- Keyword lists 
 SKINCARE_KW = ["skin", "skincare", "serum", "moisturizer", "hydration", "sunscreen", "spf", "cream"]
 MAKEUP_KW = ["makeup", "foundation", "concealer", "mascara", "lipstick", "eyeshadow", "blush", "eyeliner"]
 FRAGRANCE_KW = ["perfume", "fragrance", "scent", "smell", "cologne"]
