@@ -1,6 +1,3 @@
-# superficial.py
-# Functions to detect superficial (low-value) vs substantive comments
-
 import re
 import emoji
 
@@ -8,10 +5,7 @@ import emoji
 GENERIC_WORDS = {"nice", "good", "great", "cool", "wow", "love it", "🔥", "😍", "👍"}
 
 def is_superficial(raw_text: str) -> bool:
-    """
-    Returns True if the comment is superficial (spam/emoji/too short).
-    Otherwise False (substantive).
-    """
+
     if not isinstance(raw_text, str):
         raw_text = str(raw_text)
     text = raw_text.strip().lower()
