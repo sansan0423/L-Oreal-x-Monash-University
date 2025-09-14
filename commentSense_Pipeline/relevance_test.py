@@ -2,9 +2,10 @@ import pandas as pd
 from relevance import keyword_relevant, map_category, load_zero_shot_model, zero_shot_relevant
 
 # --- Config ---
-DATA_PATH = "dataset/comments1.csv"   # change if needed
+# --- Config ---
+DATA_PATH = "../comments_scored.csv"   # change if needed
 TEXT_COL = "textOriginal"             # adjust if your column is named differently
-USE_ZERO_SHOT = False                 # set True to test zero-shot relevance
+USE_ZERO_SHOT = False              # set True to test zero-shot relevance
 
 # --- Load data ---
 df = pd.read_csv(DATA_PATH)

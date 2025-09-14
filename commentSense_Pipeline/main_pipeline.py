@@ -1,32 +1,23 @@
 import pandas as pd
 from tqdm import tqdm
+from multiprocessing import Pool, cpu_count
 
 # --- Imports from your modules ---
 from superficial import is_superficial
 from relevance import keyword_relevant, map_category
 from category import classify_keywords
-from transformers import pipeline
 from measure_kpi import compute_kpis
 from visualize_kpis import visualize
-
+from sentiment_analysis import vader_sentiment
 # --- Config ---
 INPUT_FILE  = "comments1.csv"
 OUTPUT_COMMENTS = "comments_scored.csv"
 OUTPUT_KPIS     = "overall_kpis.csv"
+NUM_PROCESSES = max(1, cpu_count() - 1)  # leave 1 CPU free
 
-MODEL_ID = "lxyuan/distilbert-base-multilingual-cased-sentiments-student"
-DEVICE   = -1   # CPU=-1, GPU=0
-BATCH_SIZE = 32
-
-# --- Helper ---
-def collapse_label(label: str) -> str:
-    """Collapse 5-class labels into 3-class (pos/neu/neg)."""
-    label = label.lower()
-    if "positive" in label:
-        return "positive"
-    if "negative" in label:
-        return "negative"
-    return "neutral"
+# --- Multiprocessing helper ---
+def process_chunk(chunk):
+    return [vader_sentiment(text) for text in chunk]
 
 def main():
     # 1) Load dataset
@@ -34,7 +25,6 @@ def main():
     if "textOriginal" not in df.columns:
         raise ValueError("Expected a 'textOriginal' column in the CSV.")
     df["textOriginal"] = df["textOriginal"].astype(str)
-
     print(f"Loaded {len(df):,} comments from {INPUT_FILE}.")
 
     # 2) Relevance & Category
@@ -46,22 +36,20 @@ def main():
     print("Checking for superficial comments...")
     df["Substantive"] = df["textOriginal"].apply(lambda x: "Superficial" if is_superficial(x) else "Substantive")
 
-    # 4) Sentiment Analysis
-    print("Loading sentiment model...")
-    clf = pipeline("sentiment-analysis", model=MODEL_ID, device=DEVICE)
-
-    print("Running sentiment predictions...")
+    # 4) Sentiment Analysis (multiprocessing)
+    print(f"Running VADER sentiment predictions on {NUM_PROCESSES} processes...")
     texts = df["textOriginal"].tolist()
-    labels, scores = [], []
-    for i in tqdm(range(0, len(texts), BATCH_SIZE), desc="Sentiment scoring"):
-        batch = texts[i:i+BATCH_SIZE]
-        results = clf(batch, truncation=True)
-        labels.extend([r["label"].lower() for r in results])
-        scores.extend([r["score"] for r in results])
+    chunk_size = len(texts) // NUM_PROCESSES + 1
+    chunks = [texts[i:i+chunk_size] for i in range(0, len(texts), chunk_size)]
 
-    df["sentiment_label_5class"] = labels
+    with Pool(NUM_PROCESSES) as pool:
+        results_chunks = list(tqdm(pool.imap(process_chunk, chunks), total=len(chunks), desc="Sentiment scoring"))
+
+    # Flatten results
+    results = [item for sublist in results_chunks for item in sublist]
+    labels, scores = zip(*results)
+    df["sentiment_label_3class"] = labels
     df["sentiment_score"] = scores
-    df["sentiment_label_3class"] = df["sentiment_label_5class"].apply(collapse_label)
 
     # 5) Save enriched comments
     df.to_csv(OUTPUT_COMMENTS, index=False)
@@ -81,14 +69,6 @@ def main():
     preview_cols = ["textOriginal","Relevance","Substantive","Category","sentiment_label_3class","sentiment_score"]
     print("\nSample enriched comments:")
     print(df[preview_cols].head(10).to_string(index=False))
-
-    # Save partial results every N batches
-    df_partial = df.iloc[:len(labels)].copy()
-    df_partial["sentiment_label_5class"] = labels
-    df_partial["sentiment_score"] = scores
-    df_partial["sentiment_label_3class"] = df_partial["sentiment_label_5class"].apply(collapse_label)
-
-    df_partial.to_csv("partial_results.csv", index=False)
 
 if __name__ == "__main__":
     main()
