@@ -1,0 +1,10 @@
+streamlit
+pandas
+matplotlib
+seaborn
+vaderSentiment
+emoji
+scikit-learn
+tqdm
+transformers
+torch
